@@ -220,12 +220,59 @@
       color: #fca5a5;
     }
 
+    /* TABLETTE : garde le panier à droite */
     @media (max-width: 1050px) {
-      .layout { grid-template-columns: 1fr; }
-      .cart { position: static; }
-      .product-row { grid-template-columns: 90px 1fr; }
-      .product-row img { width: 90px; height: 90px; }
-      .price, .stock, .add-btn { grid-column: 1 / -1; text-align: left; }
+      .layout {
+        grid-template-columns: 1fr 320px;
+        gap: 12px;
+        padding: 12px;
+      }
+
+      .cart {
+        position: sticky;
+        top: 10px;
+        padding: 16px;
+      }
+
+      .cart h2 {
+        font-size: 24px;
+      }
+
+      .total {
+        font-size: 22px;
+      }
+
+      .validate-btn, .clear-btn, .refresh-btn {
+        font-size: 16px;
+        padding: 14px;
+      }
+
+      .product-row {
+        grid-template-columns: 80px 1fr;
+      }
+
+      .product-row img {
+        width: 80px;
+        height: 80px;
+      }
+
+      .price,
+      .stock,
+      .add-btn {
+        grid-column: 1 / -1;
+        text-align: left;
+      }
+    }
+
+    /* TÉLÉPHONE : panier en dessous uniquement sur petit écran */
+    @media (max-width: 700px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .cart {
+        position: static;
+      }
     }
   </style>
 </head>
@@ -265,8 +312,7 @@
     const SUPABASE_URL = "https://hsodtzcuiwthvzmnkhbt.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_Z0utcLdBbUWPQhFd41MoIA_key0Hp8f";
 
-    // Pour l’instant vide. Quand tu as ton webhook Discord, colle-le entre les guillemets.
-    const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1497516555511136257/5hrTeYUwZ3JC3anlei2oUSVRanlzHizfQEXln6d4ruuNFv8gHyxFY6-G81af9g4T6L3P";
+    const DISCORD_WEBHOOK_URL = "";
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
