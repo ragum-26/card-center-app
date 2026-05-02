@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Card Center - Stock & Ventes</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+    body { background: #0f172a; color: white; min-height: 100vh; }
+
+    header {
+      padding: 22px;
+      background: #111827;
+      border-bottom: 1px solid #1f2937;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    header h1 { font-size: 28px; }
+
+    #searchInput {
+      width: 340px;
+      max-width: 100%;
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: none;
+      font-size: 17px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 390px;
+      gap: 24px;
+      padding: 24px;
+    }
+
+    .products-list { display: flex; flex-direction: column; gap: 14px; }
+
+    .product-row {
+      display: grid;
+      grid-template-columns: 110px 1fr 140px 120px 130px;
+      gap: 18px;
+      align-items: center;
+      background: #111827;
+      border: 1px solid #243044;
+      border-radius: 18px;
+      padding: 14px;
+    }
+
+    .product-row img {
+      width: 110px;
+      height: 110px;
+      object-fit: contain;
+      background: #020617;
+      border-radius: 14px;
+      padding: 6px;
+    }
+
+    .product-info h2 { font-size: 21px; margin-bottom: 6px; }
+    .description { color: #cbd5e1; font-size: 15px; line-height: 1.4; }
+    .reference { color: #94a3b8; font-size: 14px; margin-top: 8px; }
+    .price { font-size: 24px; font-weight: bold; color: #22c55e; text-align: center; }
+    .stock { text-align: center; font-size: 18px; font-weight: bold; }
+    .stock.low { color: #f87171; }
+
+    .add-btn {
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      background: #2563eb;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .add-btn:disabled {
+      background: #475569;
+      cursor: not-allowed;
+    }
+
+    .cart {
+      background: #111827;
+      border: 1px solid #243044;
+      border-radius: 18px;
+      padding: 20px;
+      height: fit-content;
+      position: sticky;
+      top: 20px;
+    }
+
+    .cart h2 { font-size: 28px; margin-bottom: 18px; }
+
+    .cart-items {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 430px;
+      overflow-y: auto;
+      margin-bottom: 18px;
+    }
+
+    .empty-cart { color: #cbd5e1; font-size: 17px; }
+
+    .cart-item {
+      background: #0f172a;
+      border: 1px solid #243044;
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .cart-item-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .cart-item-name { font-weight: bold; font-size: 16px; }
+    .cart-item-price { color: #cbd5e1; font-size: 14px; margin-top: 3px; }
+
+    .remove-btn {
+      background: #ef4444;
+      border: none;
+      color: white;
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .qty-line { display: flex; align-items: center; gap: 10px; }
+
+    .qty-line button {
+      width: 34px;
+      height: 34px;
+      border: none;
+      border-radius: 8px;
+      background: #334155;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .line-total {
+      margin-left: auto;
+      font-weight: bold;
+      font-size: 17px;
+    }
+
+    .payment {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .payment button {
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .payment button.active {
+      background: #22c55e;
+      border-color: #22c55e;
+    }
+
+    .total {
+      font-size: 26px;
+      font-weight: bold;
+      margin-top: 20px;
+      margin-bottom: 18px;
+    }
+
+    .validate-btn, .clear-btn, .refresh-btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 14px;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .validate-btn { background: #22c55e; }
+    .clear-btn { background: #475569; }
+    .refresh-btn { background: #2563eb; }
+
+    .message {
+      display: none;
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 15px;
+    }
+
+    .message.success {
+      display: block;
+      background: rgba(34, 197, 94, 0.15);
+      color: #86efac;
+    }
+
+    .message.error {
+      display: block;
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+    }
+
+    @media (max-width: 1050px) {
+      .layout { grid-template-columns: 1fr; }
+      .cart { position: static; }
+      .product-row { grid-template-columns: 90px 1fr; }
+      .product-row img { width: 90px; height: 90px; }
+      .price, .stock, .add-btn { grid-column: 1 / -1; text-align: left; }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Card Center - Stock & Ventes</h1>
+    <input id="searchInput" type="text" placeholder="Rechercher un produit..." />
+  </header>
+
+  <main class="layout">
+    <section class="products-list" id="productsList">
+      Chargement des produits...
+    </section>
+
+    <aside class="cart">
+      <h2>Vente en cours</h2>
+
+      <div class="cart-items" id="cartItems"></div>
+
+      <div class="payment">
+        <button id="cashBtn" class="active" onclick="setPayment('Cash')">Cash</button>
+        <button id="cbBtn" onclick="setPayment('CB')">CB</button>
+      </div>
+
+      <div class="total" id="totalText">Total : 0.00 €</div>
+
+      <button class="validate-btn" onclick="validateSale()">Valider la vente</button>
+      <button class="clear-btn" onclick="clearCart()">Vider le panier</button>
+      <button class="refresh-btn" onclick="loadProducts()">Actualiser le stock</button>
+
+      <div class="message" id="messageBox"></div>
+    </aside>
+  </main>
+
+  <script>
+    const SUPABASE_URL = "https://hsodtzcuiwthvzmnkhbt.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_Z0utcLdBbUWPQhFd41MoIA_key0Hp8f";
+
+    // Pour l’instant vide. Quand tu as ton webhook Discord, colle-le entre les guillemets.
+    const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1497516555511136257/5hrTeYUwZ3JC3anlei2oUSVRanlzHizfQEXln6d4ruuNFv8gHyxFY6-G81af9g4T6L3P";
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let products = [];
+    let cart = [];
+    let paymentMethod = "Cash";
+
+    const productsList = document.getElementById("productsList");
+    const cartItems = document.getElementById("cartItems");
+    const totalText = document.getElementById("totalText");
+    const searchInput = document.getElementById("searchInput");
+    const messageBox = document.getElementById("messageBox");
+
+    function showMessage(text, type) {
+      messageBox.textContent = text;
+      messageBox.className = "message " + type;
+
+      setTimeout(() => {
+        messageBox.className = "message";
+      }, 4500);
+    }
+
+    function getProductImage(product) {
+      if (product.image_url && product.image_url.trim() !== "") {
+        return product.image_url;
+      }
+
+      const label = encodeURIComponent(product.name || "Card Center");
+      return `https://placehold.co/200x200/020617/ffffff?text=${label}`;
+    }
+
+    async function loadProducts() {
+      productsList.innerHTML = "Chargement des produits...";
+
+      const { data, error } = await supabaseClient
+        .from("products")
+        .select("*")
+        .eq("active", true)
+        .order("name", { ascending: true });
+
+      if (error) {
+        productsList.innerHTML = "";
+        showMessage("Erreur chargement produits : " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      products = data || [];
+      renderProducts();
+      renderCart();
+    }
+
+    function renderProducts() {
+      const search = searchInput.value.toLowerCase().trim();
+
+      const filteredProducts = products.filter(product => {
+        const searchableText = `${product.reference || ""} ${product.name || ""} ${product.category || ""} ${product.condition || ""} ${product.description || ""}`.toLowerCase();
+        return searchableText.includes(search);
+      });
+
+      productsList.innerHTML = "";
+
+      if (filteredProducts.length === 0) {
+        productsList.innerHTML = "Aucun produit trouvé.";
+        return;
+      }
+
+      filteredProducts.forEach(product => {
+        const cartItem = cart.find(item => item.id === product.id);
+        const quantityInCart = cartItem ? cartItem.quantity : 0;
+        const currentStock = product.stock - quantityInCart;
+
+        const row = document.createElement("div");
+        row.className = "product-row";
+
+        row.innerHTML = `
+          <img src="${getProductImage(product)}" alt="${product.name || 'Produit'}">
+
+          <div class="product-info">
+            <h2>${product.name || "Produit sans nom"}</h2>
+            <div class="description">
+              ${product.category || "Produit"}${product.condition ? " • " + product.condition : ""}
+            </div>
+            <div class="description">${product.description || ""}</div>
+            <div class="reference">Référence : ${product.reference || "-"}</div>
+          </div>
+
+          <div class="price">${Number(product.price || 0).toFixed(2)} €</div>
+
+          <div class="stock ${currentStock <= 2 ? "low" : ""}">
+            Stock : ${currentStock}
+          </div>
+
+          <button class="add-btn" ${currentStock <= 0 ? "disabled" : ""} onclick="addToCart('${product.id}')">
+            ${currentStock <= 0 ? "Rupture" : "Ajouter"}
+          </button>
+        `;
+
+        productsList.appendChild(row);
+      });
+    }
+
+    function addToCart(productId) {
+      const product = products.find(product => product.id === productId);
+      if (!product) return;
+
+      const existingItem = cart.find(item => item.id === productId);
+
+      if (existingItem) {
+        if (existingItem.quantity < product.stock) {
+          existingItem.quantity += 1;
+        }
+      } else if (product.stock > 0) {
+        cart.push({
+          id: product.id,
+          name: product.name,
+          reference: product.reference,
+          price: Number(product.price || 0),
+          stock: product.stock,
+          quantity: 1
+        });
+      }
+
+      renderProducts();
+      renderCart();
+    }
+
+    function increaseQuantity(productId) {
+      const item = cart.find(item => item.id === productId);
+      const product = products.find(product => product.id === productId);
+
+      if (!item || !product) return;
+
+      if (item.quantity < product.stock) {
+        item.quantity += 1;
+      }
+
+      renderProducts();
+      renderCart();
+    }
+
+    function decreaseQuantity(productId) {
+      const item = cart.find(item => item.id === productId);
+      if (!item) return;
+
+      item.quantity -= 1;
+
+      if (item.quantity <= 0) {
+        cart = cart.filter(cartItem => cartItem.id !== productId);
+      }
+
+      renderProducts();
+      renderCart();
+    }
+
+    function removeFromCart(productId) {
+      cart = cart.filter(item => item.id !== productId);
+      renderProducts();
+      renderCart();
+    }
+
+    function renderCart() {
+      cartItems.innerHTML = "";
+
+      if (cart.length === 0) {
+        cartItems.innerHTML = '<p class="empty-cart">Panier vide.</p>';
+      }
+
+      cart.forEach(item => {
+        const lineTotal = item.price * item.quantity;
+
+        const cartRow = document.createElement("div");
+        cartRow.className = "cart-item";
+
+        cartRow.innerHTML = `
+          <div class="cart-item-header">
+            <div>
+              <div class="cart-item-name">${item.name}</div>
+              <div class="cart-item-price">${item.price.toFixed(2)} € / unité</div>
+            </div>
+            <button class="remove-btn" onclick="removeFromCart('${item.id}')">X</button>
+          </div>
+
+          <div class="qty-line">
+            <button onclick="decreaseQuantity('${item.id}')">-</button>
+            <strong>${item.quantity}</strong>
+            <button onclick="increaseQuantity('${item.id}')">+</button>
+            <span class="line-total">${lineTotal.toFixed(2)} €</span>
+          </div>
+        `;
+
+        cartItems.appendChild(cartRow);
+      });
+
+      const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      totalText.textContent = `Total : ${total.toFixed(2)} €`;
+    }
+
+    function setPayment(method) {
+      paymentMethod = method;
+
+      document.getElementById("cashBtn").classList.toggle("active", method === "Cash");
+      document.getElementById("cbBtn").classList.toggle("active", method === "CB");
+    }
+
+    function clearCart() {
+      cart = [];
+      renderProducts();
+      renderCart();
+    }
+
+    async function sendDiscordNotification(saleTotal, soldItems) {
+      if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL.trim() === "") {
+        return;
+      }
+
+      const articles = soldItems
+        .map(item => `• ${item.name} x${item.quantity} — ${(item.price * item.quantity).toFixed(2)} €`)
+        .join("\n");
+
+      const message =
+        `🟢 **Nouvelle vente Card Center**\n\n` +
+        `**Total :** ${saleTotal.toFixed(2)} €\n` +
+        `**Paiement :** ${paymentMethod}\n\n` +
+        `**Articles :**\n${articles}`;
+
+      await fetch(DISCORD_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          username: "Card Center",
+          content: message
+        })
+      });
+    }
+
+    async function validateSale() {
+      if (cart.length === 0) {
+        showMessage("Le panier est vide.", "error");
+        return;
+      }
+
+      const soldItems = cart.map(item => ({ ...item }));
+      const total = soldItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+      const { data: sale, error: saleError } = await supabaseClient
+        .from("sales")
+        .insert({
+          total: total,
+          payment_method: paymentMethod,
+          seller: "Gérante"
+        })
+        .select()
+        .single();
+
+      if (saleError) {
+        showMessage("Erreur vente : " + saleError.message, "error");
+        console.error(saleError);
+        return;
+      }
+
+      const saleItems = soldItems.map(item => ({
+        sale_id: sale.id,
+        product_id: item.id,
+        quantity: item.quantity,
+        unit_price: item.price,
+        line_total: item.price * item.quantity
+      }));
+
+      const { error: saleItemsError } = await supabaseClient
+        .from("sale_items")
+        .insert(saleItems);
+
+      if (saleItemsError) {
+        showMessage("Erreur articles vendus : " + saleItemsError.message, "error");
+        console.error(saleItemsError);
+        return;
+      }
+
+      for (const item of soldItems) {
+        const product = products.find(product => product.id === item.id);
+        const newStock = product.stock - item.quantity;
+
+        const { error: stockError } = await supabaseClient
+          .from("products")
+          .update({ stock: newStock })
+          .eq("id", item.id);
+
+        if (stockError) {
+          showMessage("Erreur stock : " + stockError.message, "error");
+          console.error(stockError);
+          return;
+        }
+      }
+
+      try {
+        await sendDiscordNotification(total, soldItems);
+      } catch (discordError) {
+        console.warn("Notification Discord non envoyée :", discordError);
+      }
+
+      showMessage("Vente enregistrée. Stock mis à jour.", "success");
+      clearCart();
+      await loadProducts();
+    }
+
+    searchInput.addEventListener("input", renderProducts);
+
+    loadProducts();
+  </script>
+</body>
+</html>
