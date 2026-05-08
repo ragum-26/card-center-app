@@ -220,7 +220,6 @@
       color: #fca5a5;
     }
 
-    /* TABLETTE : garde le panier à droite */
     @media (max-width: 1050px) {
       .layout {
         grid-template-columns: 1fr 320px;
@@ -264,7 +263,6 @@
       }
     }
 
-    /* TÉLÉPHONE : panier en dessous uniquement sur petit écran */
     @media (max-width: 700px) {
       .layout {
         grid-template-columns: 1fr;
@@ -312,7 +310,7 @@
     const SUPABASE_URL = "https://hsodtzcuiwthvzmnkhbt.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_Z0utcLdBbUWPQhFd41MoIA_key0Hp8f";
 
-    const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1497516555511136257/5hrTeYUwZ3JC3anlei2oUSVRanlzHizfQEXln6d4ruuNFv8gHyxFY6-G81af9g4T6L3P";
+    const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1502300811823157429/iHjgl4FqPmUUfeaNivEezqUBggS-ThgrPx49JuRlatG51RRMOmJgfPzpQEQTyIz2DeVy";
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -525,7 +523,12 @@
     }
 
     async function sendDiscordNotification(saleTotal, soldItems) {
-      if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL.trim() === "https://discord.com/api/webhooks/1497516555511136257/5hrTeYUwZ3JC3anlei2oUSVRanlzHizfQEXln6d4ruuNFv8gHyxFY6-G81af9g4T6L3P") {
+      if (
+        !DISCORD_WEBHOOK_URL ||
+        DISCORD_WEBHOOK_URL.trim() === "" ||
+        DISCORD_WEBHOOK_URL.includes("COLLE_TON_NOUVEAU_WEBHOOK_DISCORD_ICI")
+      ) {
+        console.warn("Webhook Discord absent.");
         return;
       }
 
@@ -539,7 +542,7 @@
         `**Paiement :** ${paymentMethod}\n\n` +
         `**Articles :**\n${articles}`;
 
-      await fetch(DISCORD_WEBHOOK_URL, {
+      const response = await fetch(DISCORD_WEBHOOK_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -549,6 +552,10 @@
           content: message
         })
       });
+
+      if (!response.ok) {
+        throw new Error("Erreur Discord : " + response.status);
+      }
     }
 
     async function validateSale() {
@@ -614,9 +621,13 @@
         await sendDiscordNotification(total, soldItems);
       } catch (discordError) {
         console.warn("Notification Discord non envoyée :", discordError);
+        showMessage("Vente enregistrée, mais notification Discord non envoyée.", "error");
+        clearCart();
+        await loadProducts();
+        return;
       }
 
-      showMessage("Vente enregistrée. Stock mis à jour.", "success");
+      showMessage("Vente enregistrée. Stock mis à jour. Notification Discord envoyée.", "success");
       clearCart();
       await loadProducts();
     }
